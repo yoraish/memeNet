@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def show_img(arr, text = ""):
-    print(type(arr))
     if type(arr) != np.ndarray:
         raise Exception('The image could not be showed - not a numpy array')
 
@@ -17,10 +16,44 @@ def show_img(arr, text = ""):
     plt.show()
 
 
-mnist = tf.keras.datasets.mnist
-(x_train, y_train),(x_test, y_test) = mnist.load_data()
+# def trainer
 
 
 if __name__ == "__main__":
-    # show one picture  of the train set
-    show_img(x_train[0], "Expectation = "+ str(y_train[0]))
+
+    mnist = tf.keras.datasets.mnist
+    (x_train, y_train),(x_test, y_test) = mnist.load_data()
+    x_train, x_test = x_train / 255.0, x_test / 255.0
+
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Flatten(input_shape=(28,28)),
+        tf.keras.layers.Dense(512, activation=tf.nn.relu),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(10,activation= tf.nn.softmax)
+    ])
+
+    model.compile(optimizer='adam', 
+                 loss='sparse_categorical_crossentropy',
+                 metrics=['accuracy'])
+    
+    model.fit(x_train, y_train, epochs=5)
+    test_loss, test_acc = model.evaluate(x_test[:1], y_test[:1])
+
+    # sanity check - get the prediction for the first '5' from the training set
+    num_predictions = 3
+    predictions = model.predict(x_test[:num_predictions])
+    print(predictions)
+
+
+
+    while True:
+        # user-interactive test for stuff in test datasets
+        ix = input("Type index for picture from test >>>")
+        ix = int(ix)
+        if ix > len(x_test):
+            print("Index out of range, please enter indices up to ", num_predictions-1)
+
+        else:
+            res = np.argmax(predictions[ix])
+            # show one picture  of the test set3
+            show_img(x_test[ix], "Expectation = "+ str(y_test[ix]) + " result=" + str(res))
