@@ -32,7 +32,7 @@ def resize_all_in_folder(path, save_to_folder, r, c):
             img = np.asarray(Image.open(img_path))
             resized_img = resize(img, c,r)
             #save the image
-            cv2.imwrite(os.path.join(save_to_folder, filename), resized_img)
+            cv2.imwrite(os.path.join(save_to_folder, filename[:-3] + 'png'), resized_img)
 
             
         else:

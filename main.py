@@ -1,6 +1,14 @@
 # MAIN CODE FOR NEURAL MEMEFUL NETWORK
 
-#placeholder
+import numpy as np
+import matplotlib.pyplot as plt
+import cv2
+from PIL import Image
+import os
 
-for i in range(10**10):
-    print('hi')
+
+
+
+
+if __name__ == '__main__':
+    pass
