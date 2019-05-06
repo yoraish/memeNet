@@ -29,12 +29,15 @@ if __name__ == "__main__":
                  metrics=['accuracy'])
     
     model.fit(x_train, y_train, epochs=5)
-    test_loss, test_acc = model.evaluate(x_test[:1], y_test[:1])
+    test_loss, test_acc =   model.evaluate(x_test, y_test)
+    print('test loss =', test_loss)
+    print('test accuracy = ', test_acc)
+    # test_loss, test_acc = model.evaluate(x_test[:1], y_test[:1])
 
-    # sanity check - get the prediction for the first '5' from the training set
-    num_predictions = 3
-    predictions = model.predict(x_test[:num_predictions])
-    print(predictions)
+    # # sanity check - get the prediction for the first '5' from the training set
+    # num_predictions = 3
+    # predictions = model.predict(x_test[:num_predictions])
+    # print(predictions)
 
 
 
