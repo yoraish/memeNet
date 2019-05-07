@@ -8,7 +8,10 @@ import os
 import json
 from meme_utils import *
 import tensorflow as tf
-
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras import losses
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Dropout
 
 def load_meme(id):
     # loads the image associated with the id of meme
@@ -127,6 +130,7 @@ def create_model():
     print("Generating Test Image Data")
     x_test = np.float32(np.array([ np.asarray(load_meme(y_test_ids[i])) for i in range(len(y_test)) ]))
     print('---Done preparing data---')
+
     '''
     print('sanity check, showing the fifth entry of train set')
     show_img(x_train[5])
@@ -135,63 +139,46 @@ def create_model():
 
     # define the model
     # global parameters needed for training:
-    epochs = 10
-    batch_size = 128
-    keep_probability = 0.7
-    learning_rate = 0.001
+
     n = len(x_train[0]) # the size of the images
-    keep_prob = tf.placeholder(tf.float32, name='keep_prob')
-    logits = conv_net(x_train, keep_prob)
-    x = tf.placeholder(tf.float32, shape=(None, 32, 32, 3), name='x_train')
-    y =  tf.placeholder(tf.float32, shape=(None, 10), name='y_train')
+    input_shape = (n,n,3)
 
-    # Loss and Optimizer
-    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y_train))
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
-
-    # Accuracy
-    correct_pred = tf.equal(tf.argmax(logits, 1), tf.argmax(y, 1))
-    accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32), name='accuracy')
-
-    session.run(optimizer, 
-                feed_dict={
-                    x: x_train,
-                    y: y_train,
-                    keep_prob: keep_probability
-                })
+    #one-hot encode target column
+    y_train = to_categorical(y_train)
+    y_test = to_categorical(y_test)
 
 
-
-
-
-
-
+    #create model
+    model = Sequential()
+    #add model layers
+    model.add(Conv2D(16, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(32, (3, 3), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+    #--------------------------
+    model.add(Conv2D(16, kernel_size=(3, 3), activation='relu', input_shape=input_shape)) 
+    model.add(Conv2D(32, (3, 3), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+    #--------------------------
+    model.add(Flatten())
+    model.add(Dense(16, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(8, activation='softmax'))
 
 
 
 
-    """   model = tf.keras.models.Sequential()
-    
-    model.add(tf.keras.layers.Conv2D(32, kernel_size=(3, 3),
-                    activation='relu',
-                    input_shape=(n,n,3)))
-    model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
-    model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
-    model.add(tf.keras.layers.Dropout(0.25))
-    model.add(tf.keras.layers.Flatten())
-    model.add(tf.keras.layers.Dense(128, activation='relu'))
-    model.add(tf.keras.layers.Dropout(0.5))
-    model.add(tf.keras.layers.Dense(num_classes, activation='softmax'))
 
 
-    model.compile(optimizer='adam', 
-                 loss='sparse_categorical_crossentropy',
-                 metrics=['accuracy'])
+    #compile model using accuracy to measure model performance
+    model.compile(loss= losses.categorical_crossentropy, optimizer=tf.keras.optimizers.Adam(), metrics=['accuracy'])
 
-    model.fit(x_train, y_train, epochs=5)
-    test_loss, test_acc = model.evaluate(x_test, y_test)
-    print('test loss =', test_loss)
-    print('test accuracy = ', test_acc)"""
+    #train the model
+    model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=65)
+
+
+
 
 if __name__ == '__main__':
     # create and train the model

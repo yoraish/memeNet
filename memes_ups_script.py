@@ -58,7 +58,7 @@ with open("../db.json") as db:
         # else put in train
         id = tup[1]
         value = tup[0]
-        if counter%4 == 0:
+        if counter%9 == 0:
             test_data[id] = value
         else:
             train_data[id] = value
