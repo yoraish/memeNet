@@ -7,11 +7,14 @@ from PIL import Image
 import os
 import json
 from meme_utils import *
+
 import tensorflow as tf
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import losses
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Dropout
+from tensorflow.keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Dropout, Activation, BatchNormalization
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
 
 def load_meme(id,size):
     # loads the image associated with the id of meme
@@ -19,7 +22,7 @@ def load_meme(id,size):
     folder = '/Users/yoraish/Dropbox (MIT)/MIT/School/18.065/project/memes_resized_'+str(size)
     img = Image.open(os.path.join(folder,id+'.png'))
     # normalize image
-    img = normalize(img)
+    img = normalize(img) # maybe take out - check both
     return img
 
 def encode_labels(labels_list):
@@ -33,63 +36,13 @@ def encode_labels(labels_list):
         encoded[ix][label] = 1
     return encoded
 
-
-def conv_net(x, keep_prob):
-    conv1_filter = tf.Variable(tf.truncated_normal(shape=[3, 3, 3, 64], mean=0, stddev=0.08))
-    conv2_filter = tf.Variable(tf.truncated_normal(shape=[3, 3, 64, 128], mean=0, stddev=0.08))
-    conv3_filter = tf.Variable(tf.truncated_normal(shape=[5, 5, 128, 256], mean=0, stddev=0.08))
-    conv4_filter = tf.Variable(tf.truncated_normal(shape=[5, 5, 256, 512], mean=0, stddev=0.08))
-
-    # 1, 2
-    conv1 = tf.nn.conv2d(x, conv1_filter, strides=[1,1,1,1], padding='SAME')
-    conv1 = tf.nn.relu(conv1)
-    conv1_pool = tf.nn.max_pool(conv1, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
-    conv1_bn = tf.layers.batch_normalization(conv1_pool)
-
-    # 3, 4
-    conv2 = tf.nn.conv2d(conv1_bn, conv2_filter, strides=[1,1,1,1], padding='SAME')
-    conv2 = tf.nn.relu(conv2)
-    conv2_pool = tf.nn.max_pool(conv2, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')    
-    conv2_bn = tf.layers.batch_normalization(conv2_pool)
-  
-    # 5, 6
-    conv3 = tf.nn.conv2d(conv2_bn, conv3_filter, strides=[1,1,1,1], padding='SAME')
-    conv3 = tf.nn.relu(conv3)
-    conv3_pool = tf.nn.max_pool(conv3, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')  
-    conv3_bn = tf.layers.batch_normalization(conv3_pool)
-    
-    # 7, 8
-    conv4 = tf.nn.conv2d(conv3_bn, conv4_filter, strides=[1,1,1,1], padding='SAME')
-    conv4 = tf.nn.relu(conv4)
-    conv4_pool = tf.nn.max_pool(conv4, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
-    conv4_bn = tf.layers.batch_normalization(conv4_pool)
-    
-    # 9
-    flat = tf.contrib.layers.flatten(conv4_bn)  
-
-    # 10
-    full1 = tf.contrib.layers.fully_connected(inputs=flat, num_outputs=128, activation_fn=tf.nn.relu)
-    full1 = tf.nn.dropout(full1, keep_prob)
-    full1 = tf.layers.batch_normalization(full1)
-    
-    # 11
-    full2 = tf.contrib.layers.fully_connected(inputs=full1, num_outputs=256, activation_fn=tf.nn.relu)
-    full2 = tf.nn.dropout(full2, keep_prob)
-    full2 = tf.layers.batch_normalization(full2)
-    
-    # 12
-    full3 = tf.contrib.layers.fully_connected(inputs=full2, num_outputs=512, activation_fn=tf.nn.relu)
-    full3 = tf.nn.dropout(full3, keep_prob)
-    full3 = tf.layers.batch_normalization(full3)    
-    
-    # 13
-    full4 = tf.contrib.layers.fully_connected(inputs=full3, num_outputs=1024, activation_fn=tf.nn.relu)
-    full4 = tf.nn.dropout(full4, keep_prob)
-    full4 = tf.layers.batch_normalization(full4)        
-    
-    # 14
-    out = tf.contrib.layers.fully_connected(inputs=full3, num_outputs=8, activation_fn=None)
-    return out
+def lr_schedule(epoch):
+    lrate = 0.001
+    if epoch > 75:
+        lrate = 0.0005
+    if epoch > 100:
+        lrate = 0.0003
+    return lrate
 
 def create_model(size = 28, get_meme_data = True):
     # creates and trains a model to classify memes to one of the like categories
@@ -105,8 +58,8 @@ def create_model(size = 28, get_meme_data = True):
     y_test_ids = []
     y_test = []
 
-
-    # populate train ids
+    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # populate train ids 
     if get_meme_data:
         num_outputs = 8
 
@@ -137,15 +90,15 @@ def create_model(size = 28, get_meme_data = True):
         size = 32
         num_outputs = 10
 
-        # ======================================
         from tensorflow.keras.datasets import cifar10
 
         (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-        # =======================================
 
+    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    print('sanity check, showing the fifth entry of train set')
-    show_img(x_train[5])
+    # print('sanity check, showing the fifth entry of train set')
+    # show_img(x_train[5])
+    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
@@ -158,31 +111,86 @@ def create_model(size = 28, get_meme_data = True):
     # y_train = to_categorical(y_train)
     # y_test = to_categorical(y_test)
 
+    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #create model 
+    x_train = x_train.astype('float32')
+    x_test = x_test.astype('float32')
+    
+    #z-score
+    mean = np.mean(x_train,axis=(0,1,2,3))
+    std = np.std(x_train,axis=(0,1,2,3))
+    x_train = (x_train-mean)/(std+1e-7)
+    x_test = (x_test-mean)/(std+1e-7)
 
-    #create model
+
+    y_train = to_categorical(y_train,num_outputs)
+    y_test = to_categorical(y_test,num_outputs)
+    
+    weight_decay = 1e-4
     model = Sequential()
+    model.add(Conv2D(32, (3,3), padding='same', kernel_regularizer=tf.keras.regularizers.l2(weight_decay), input_shape=x_train.shape[1:]))
+    model.add(Activation('elu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(32, (3,3), padding='same', kernel_regularizer=tf.keras.regularizers.l2(weight_decay)))
+    model.add(Activation('elu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(pool_size=(2,2)))
+    model.add(Dropout(0.2))
+    
+    model.add(Conv2D(64, (3,3), padding='same', kernel_regularizer=tf.keras.regularizers.l2(weight_decay)))
+    model.add(Activation('elu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(64, (3,3), padding='same', kernel_regularizer=tf.keras.regularizers.l2(weight_decay)))
+    model.add(Activation('elu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(pool_size=(2,2)))
+    model.add(Dropout(0.3))
+    
+    model.add(Conv2D(128, (3,3), padding='same', kernel_regularizer=tf.keras.regularizers.l2(weight_decay)))
+    model.add(Activation('elu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(128, (3,3), padding='same', kernel_regularizer=tf.keras.regularizers.l2(weight_decay)))
+    model.add(Activation('elu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(pool_size=(2,2)))
+    model.add(Dropout(0.4))
+    
+    model.add(Flatten())
+    model.add(Dense(num_outputs, activation='softmax'))
+    
+    model.summary()
+    
+    #data augmentation
+    datagen = ImageDataGenerator(
+        rotation_range=15,
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        horizontal_flip=True,
+        )
+    datagen.fit(x_train)
+    
+    #training
+    batch_size = 64
+    
+    opt_rms = tf.keras.optimizers.RMSprop(lr=0.001,decay=1e-6)
+    model.compile(loss='categorical_crossentropy', optimizer=opt_rms, metrics=['accuracy'])
+    model.fit_generator(datagen.flow(x_train, y_train, batch_size=batch_size),\
+                        steps_per_epoch=x_train.shape[0] // batch_size,epochs=125,\
+                        verbose=1,validation_data=(x_test,y_test),callbacks=[tf.keras.callbacks.LearningRateScheduler(lr_schedule)])
+    #save to disk
+    # model_json = model.to_json()
+    # with open('model.json', 'w') as json_file:
+    #     json_file.write(model_json)
+    # model.save_weights('model.h5') 
+    
+    #testing
+    scores = model.evaluate(x_test, y_test, batch_size=128, verbose=1)
+    print('\nTest result: %.3f loss: %.3f' % (scores[1]*100,scores[0]))
 
-    model.add(tf.keras.layers.Conv2D(32, kernel_size=(3, 3),
-                    activation='relu',
-                    input_shape=input_shape))
-    model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
-    model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
-    model.add(tf.keras.layers.Dropout(0.25))
-    model.add(tf.keras.layers.Flatten())
-    model.add(tf.keras.layers.Dense(128, activation='relu'))
-    model.add(tf.keras.layers.Dropout(0.5))
-    model.add(tf.keras.layers.Dense(num_outputs, activation='softmax'))
 
 
+    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
-
-    #compile model using accuracy to measure model performance
-    model.compile(optimizer='adam', 
-                 loss='sparse_categorical_crossentropy',
-                 metrics=['accuracy'])
-    #train the model
-    model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=65)
 
 
 
@@ -190,4 +198,5 @@ def create_model(size = 28, get_meme_data = True):
 if __name__ == '__main__':
     # create and train the model
     # choose image size from 28,64,128,244
-    create_model(28, get_meme_data = True)
+    # get meme data in the specified image size, or not, and then the data will be CIFAR10
+    create_model(32, get_meme_data = True)

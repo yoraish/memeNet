@@ -51,5 +51,5 @@ def resize_all_in_folder(path, save_to_folder, r, c):
             continue
 
 if __name__ == "__main__":
-    size = 244
+    size = 32
     resize_all_in_folder("/Users/yoraish/Dropbox (MIT)/MIT/School/18.065/project/memes","/Users/yoraish/Dropbox (MIT)/MIT/School/18.065/project/memes_resized_" + str(size), size,size) # change the path to be true to your machine
