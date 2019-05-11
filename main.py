@@ -16,14 +16,7 @@ from tensorflow.keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Dropou
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
-def load_meme(id,size):
-    # loads the image associated with the id of meme
-    # returns an array of the rgb values of the image
-    folder = '/Users/yoraish/Dropbox (MIT)/MIT/School/18.065/project/memes_resized_'+str(size)
-    img = Image.open(os.path.join(folder,id+'.png'))
-    # normalize image
-    img = normalize(img) # maybe take out - check both
-    return img
+
 
 def encode_labels(labels_list):
     """takes in a labels list and returns a 2D array mapping id (int) to label
@@ -61,7 +54,7 @@ def create_model(size = 28, get_meme_data = True):
     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # populate train ids 
     if get_meme_data:
-        num_outputs = 8
+        num_outputs = 2 #8
 
         print("Generating Training Label Data")
         with open("train_db.json") as train_db:
@@ -98,6 +91,10 @@ def create_model(size = 28, get_meme_data = True):
 
     # print('sanity check, showing the fifth entry of train set')
     # show_img(x_train[5])
+    # show_img(x_train[15])
+    # show_img(x_train[25])
+
+
     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -117,10 +114,10 @@ def create_model(size = 28, get_meme_data = True):
     x_test = x_test.astype('float32')
     
     #z-score
-    mean = np.mean(x_train,axis=(0,1,2,3))
-    std = np.std(x_train,axis=(0,1,2,3))
-    x_train = (x_train-mean)/(std+1e-7)
-    x_test = (x_test-mean)/(std+1e-7)
+    # mean = np.mean(x_train,axis=(0,1,2,3))
+    # std = np.std(x_train,axis=(0,1,2,3))
+    # x_train = (x_train-mean)/(std+1e-7)
+    # x_test = (x_test-mean)/(std+1e-7)
 
 
     y_train = to_categorical(y_train,num_outputs)
@@ -159,34 +156,53 @@ def create_model(size = 28, get_meme_data = True):
     model.add(Dense(num_outputs, activation='softmax'))
     
     model.summary()
+
+
+
+
+    # #data augmentation
+    # datagen = ImageDataGenerator(
+    #     rotation_range=15,
+    #     width_shift_range=0.1,
+    #     height_shift_range=0.1,
+    #     horizontal_flip=True,
+    #     )
+    # datagen.fit(x_train)
     
-    #data augmentation
-    datagen = ImageDataGenerator(
-        rotation_range=15,
-        width_shift_range=0.1,
-        height_shift_range=0.1,
-        horizontal_flip=True,
-        )
-    datagen.fit(x_train)
-    
-    #training
-    batch_size = 64
+    # #training
+    # batch_size = 4 # controls the size of each batch
     
     opt_rms = tf.keras.optimizers.RMSprop(lr=0.001,decay=1e-6)
     model.compile(loss='categorical_crossentropy', optimizer=opt_rms, metrics=['accuracy'])
-    model.fit_generator(datagen.flow(x_train, y_train, batch_size=batch_size),\
-                        steps_per_epoch=x_train.shape[0] // batch_size,epochs=125,\
-                        verbose=1,validation_data=(x_test,y_test),callbacks=[tf.keras.callbacks.LearningRateScheduler(lr_schedule)])
+    # model.fit_generator(datagen.flow(x_train, y_train, batch_size=batch_size),\
+    #                     steps_per_epoch=x_train.shape[0] // batch_size,epochs=125,\
+    #                     verbose=1,validation_data=(x_test,y_test),callbacks=[tf.keras.callbacks.LearningRateScheduler(lr_schedule)])
+
+
+
+    model.fit(x_train, y_train, epochs=5)
+    model.evaluate(x_test, y_test)
+
     #save to disk
-    # model_json = model.to_json()
-    # with open('model.json', 'w') as json_file:
-    #     json_file.write(model_json)
-    # model.save_weights('model.h5') 
+    model_json = model.to_json()
+    model_name = 'model_memes3'
+    with open(model_name + '.json', 'w') as json_file:
+        json_file.write(model_json)
+    
+    model.save_weights(model_name+'.h5') 
+
     
     #testing
     scores = model.evaluate(x_test, y_test, batch_size=128, verbose=1)
     print('\nTest result: %.3f loss: %.3f' % (scores[1]*100,scores[0]))
 
+    # save specs txt file with
+    # acc train
+    # acc test
+    # batch size
+    # dataset
+    with open('HIST.txt', 'a+') as spec_file:
+        spec_file.write("\nName= " + model_name + " | acc test = " + str(scores[1]*100) + " | loss test = " + str(scores[0]) + " | batch size= " + str(batch_size) + "| memes? " + str(get_meme_data) + '\n')
 
 
     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++

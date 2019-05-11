@@ -38,12 +38,14 @@ with open("../db.json") as db:
         if ups > 2**16 -1:
             ups = 2**16
         
-        print('---->',data['_default'][str(i)]['id'], data['_default'][str(i)]['ups'], '--->', round(log(ups,2))-9)
 
         # check that a file with this id exists in the resized directory, 
         # only store info if this file exists
-        if os.path.isfile('../memes_resized/'+id + '.png'):
-            memes_dict[id] = round(log(ups,2))-9
+        if os.path.isfile('../memes_resized_28/'+id + '.png'):
+            print('---->',data['_default'][str(i)]['id'], data['_default'][str(i)]['ups'], '--->', round(log(ups,46))-2)
+            memes_dict[id] = round(log(ups,46))-2
+        else:
+            print("not file, movinf on")
 
     # split the data to 75% train and 25% test
     train_data = {}
@@ -58,7 +60,7 @@ with open("../db.json") as db:
         # else put in train
         id = tup[1]
         value = tup[0]
-        if counter%9 == 0:
+        if counter%8 == 0:
             test_data[id] = value
         else:
             train_data[id] = value

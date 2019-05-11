@@ -1,0 +1,1 @@
+Name= model_memes2 | acc test = 24.369747936725616 | loss test = 2.3032503605556753 | batch size= 128| memes? True
