@@ -21,7 +21,7 @@ def vis(dict, heading):
     plt.figure(0)
     lst = sorted([i for i in dict.values()])
 
-    plotting_bins=np.arange(0,10,1) # need to add an extra bin when plotting 
+    plotting_bins=np.arange(-4,20,1) # need to add an extra bin when plotting 
     plt.hist(lst, bins=plotting_bins)
     plt.title(heading)
     plt.show()
@@ -30,7 +30,6 @@ def vis(dict, heading):
 memes_dict = {}
 with open("../db.json") as db:
     data = json.load(db)
-    type(data)
     for i in range(1,len(data['_default'])):
         id = data['_default'][str(i)]['id']
         ups = data['_default'][str(i)]['ups']
@@ -43,7 +42,10 @@ with open("../db.json") as db:
         # only store info if this file exists
         if os.path.isfile('../memes_resized_28/'+id + '.png'):
             print('---->',data['_default'][str(i)]['id'], data['_default'][str(i)]['ups'], '--->', round(log(ups,46))-2)
-            memes_dict[id] = round(log(ups,46))-2
+            score = round(log(ups,46))-2
+            if score < 0:
+                score = 0
+            memes_dict[id] = score
         else:
             print("not file, movinf on")
 

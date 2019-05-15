@@ -16,7 +16,26 @@ from tensorflow.keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Dropou
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
+def plot_history(history):
+    print('in history')
+    acc = history.history['acc']
+    val_acc = history.history['val_acc']
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+    x = range(1, len(acc) + 1)
 
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.plot(x, acc, 'b', label='Training acc')
+    plt.plot(x, val_acc, 'r', label='Validation acc')
+    plt.title('Training and validation accuracy')
+    plt.legend()
+    plt.subplot(1, 2, 2)
+    plt.plot(x, loss, 'b', label='Training loss')
+    plt.plot(x, val_loss, 'r', label='Validation loss')
+    plt.title('Training and validation loss')
+    plt.legend()
+    plt.show()
 
 def encode_labels(labels_list):
     """takes in a labels list and returns a 2D array mapping id (int) to label
@@ -54,7 +73,7 @@ def create_model(size = 28, get_meme_data = True):
     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # populate train ids 
     if get_meme_data:
-        num_outputs = 2 #8
+        num_outputs = 2 #4
 
         print("Generating Training Label Data")
         with open("train_db.json") as train_db:
@@ -135,19 +154,19 @@ def create_model(size = 28, get_meme_data = True):
     model.add(Dropout(0.2))
     
     model.add(Conv2D(64, (3,3), padding='same', kernel_regularizer=tf.keras.regularizers.l2(weight_decay)))
-    model.add(Activation('elu'))
+    model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(Conv2D(64, (3,3), padding='same', kernel_regularizer=tf.keras.regularizers.l2(weight_decay)))
-    model.add(Activation('elu'))
+    model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(MaxPooling2D(pool_size=(2,2)))
     model.add(Dropout(0.3))
     
     model.add(Conv2D(128, (3,3), padding='same', kernel_regularizer=tf.keras.regularizers.l2(weight_decay)))
-    model.add(Activation('elu'))
+    model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(Conv2D(128, (3,3), padding='same', kernel_regularizer=tf.keras.regularizers.l2(weight_decay)))
-    model.add(Activation('elu'))
+    model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(MaxPooling2D(pool_size=(2,2)))
     model.add(Dropout(0.4))
@@ -180,8 +199,10 @@ def create_model(size = 28, get_meme_data = True):
 
 
 
-    model.fit(x_train, y_train, epochs=5)
-    model.evaluate(x_test, y_test)
+    history = model.fit(x_train, y_train, epochs=10,batch_size=128, validation_data=(x_test, y_test))
+    # model.evaluate(x_test, y_test)
+
+    plot_history(history)
 
     #save to disk
     model_json = model.to_json()
@@ -193,7 +214,7 @@ def create_model(size = 28, get_meme_data = True):
 
     
     #testing
-    scores = model.evaluate(x_test, y_test, batch_size=128, verbose=1)
+    scores = model.evaluate(x_train, y_train, batch_size=128, verbose=1)
     print('\nTest result: %.3f loss: %.3f' % (scores[1]*100,scores[0]))
 
     # save specs txt file with
@@ -201,8 +222,8 @@ def create_model(size = 28, get_meme_data = True):
     # acc test
     # batch size
     # dataset
-    with open('HIST.txt', 'a+') as spec_file:
-        spec_file.write("\nName= " + model_name + " | acc test = " + str(scores[1]*100) + " | loss test = " + str(scores[0]) + " | batch size= " + str(batch_size) + "| memes? " + str(get_meme_data) + '\n')
+    # with open('HIST.txt', 'a+') as spec_file:
+    #     spec_file.write("\nName= " + model_name + " | acc test = " + str(scores[1]*100) + " | loss test = " + str(scores[0]) + " | batch size= " + str(batch_size) + "| memes? " + str(get_meme_data) + '\n')
 
 
     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -215,4 +236,4 @@ if __name__ == '__main__':
     # create and train the model
     # choose image size from 28,64,128,244
     # get meme data in the specified image size, or not, and then the data will be CIFAR10
-    create_model(32, get_meme_data = True)
+    create_model(64, get_meme_data = True)
